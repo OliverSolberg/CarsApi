@@ -42,4 +42,22 @@ app.MapPut("/car/{id}", async (int id, Car inputCar, CarDb db) =>
     car.Model = inputCar.Model;
     car.BuildYear = inputCar.BuildYear;
     car.Owner = inputCar.Owner;
+
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
 });
+
+app.MapDelete("/cars/{id}", async (int id, CarDb db) =>
+{
+    if (await db.Cars.FindAsync(id) is Car car)
+    {
+        db.Cars.Remove(car);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    return Results.NotFound();
+    });
+
+    app.Run();
