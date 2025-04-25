@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "QuEgDZARg1cQRDK5XSWy0j2mpEi9G0cpAorGV9wWm28=",
+  "Source": "CarsApi",
+  "BasePath": "_content/CarsApi",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}
