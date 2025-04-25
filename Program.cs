@@ -26,11 +26,14 @@ if(app.Environment.IsDevelopment())
 }
 
 var cars = app.MapGroup("/cars");
+var people = app.MapGroup("/people");
 
 cars.MapGet("/", async (CarDb db) =>
     await db.Cars.ToListAsync());
+people.MapGet("/", async (PeopleDb db) =>
+    await db.People.ToListAsync());
 
-cars.MapGet("/make", async (string make, CarDb db) =>
+cars.MapGet("/{make}", async (string make, CarDb db) =>
     await db.Cars.Where(c => c.Make == make).ToListAsync());
 
 cars.MapGet("/registered", async (CarDb db) =>
@@ -44,6 +47,11 @@ cars.MapGet("/{id}", async (int id, CarDb db) =>
         is Car car
             ? Results.Ok(car)
             : Results.NotFound());
+people.MapGet("/{id}", async (int id, PeopleDb db) =>
+    await db.People.FindAsync(id)
+        is Person person
+            ? Results.Ok(person)
+            : Results.NotFound());
 
 cars.MapPost("/", async (Car car, CarDb db) =>
 {
@@ -52,8 +60,15 @@ cars.MapPost("/", async (Car car, CarDb db) =>
 
     return Results.Created($"/{car.Id}", car);
 });
+people.MapPost("/", async ( Person person, PeopleDb db) =>
+{
+    db.People.Add(person);
+    await db.SaveChangesAsync();
 
-cars.MapPut("/car/{id}", async (int id, Car inputCar, CarDb db) =>
+    return Results.Created($"/{person.Id}", person);
+});
+
+cars.MapPut("/{id}", async (int id, Car inputCar, CarDb db) =>
 {
     var car = await db.Cars.FindAsync(id);
 
@@ -64,6 +79,21 @@ cars.MapPut("/car/{id}", async (int id, Car inputCar, CarDb db) =>
     car.Model = inputCar.Model;
     car.BuildYear = inputCar.BuildYear;
     car.Owner = inputCar.Owner;
+
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
+people.MapPut("/{id}", async (int id, Person inputPerson, PeopleDb db) =>
+{
+    var person = await db.People.FindAsync(id);
+
+    if(person is null) return Results.NotFound();
+
+    person.Name = inputPerson.Name;
+    person.Birthday = inputPerson.Birthday;
+    person.Car = inputPerson.Car;
 
     await db.SaveChangesAsync();
 
@@ -81,5 +111,16 @@ cars.MapDelete("/{id}", async (int id, CarDb db) =>
 
     return Results.NotFound();
     });
+people.MapDelete("/{id}", async (int id, PeopleDb db) =>
+{
+    if(await db.People.FindAsync(id) is Person person)
+    {
+        db.People.Remove(person);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    return Results.NotFound();
+});
 
     app.Run();
