@@ -7,3 +7,39 @@ var app = builder.Build();
 
 app.MapGet("/cars", async (CarDb db) =>
     await db.Cars.ToListAsync());
+
+app.MapGet("/cars/make", async (string make, CarDb db) =>
+    await db.Cars.Where(c => c.Make == make).ToListAsync());
+
+app.MapGet("/cars/registered", async (CarDb db) =>
+    await db.Cars.Where(t => t.IsRegistered).ToListAsync());
+
+app.MapGet("/cars/unregistered", async (CarDb db) =>
+    await db.Cars.Where(t => !t.IsRegistered).ToListAsync());
+
+app.MapGet("/cars/{id}", async (int id, CarDb db) =>
+    await db.Cars.FindAsync(id)
+        is Car car
+            ? Results.Ok(car)
+            : Results.NotFound());
+
+app.MapPost("/cars", async (Car car, CarDb db) =>
+{
+    db.Cars.Add(car);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/cars/{car.Id}", car);
+});
+
+app.MapPut("/car/{id}", async (int id, Car inputCar, CarDb db) =>
+{
+    var car = await db.Cars.FindAsync(id);
+
+    if(car is null) return Results.NotFound();
+
+    car.IsRegistered = inputCar.IsRegistered;
+    car.Make = inputCar.Make;
+    car.Model = inputCar.Model;
+    car.BuildYear = inputCar.BuildYear;
+    car.Owner = inputCar.Owner;
+});
