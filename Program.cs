@@ -25,33 +25,35 @@ if(app.Environment.IsDevelopment())
     });
 }
 
-app.MapGet("/cars", async (CarDb db) =>
+var cars = app.MapGroup("/cars");
+
+cars.MapGet("/", async (CarDb db) =>
     await db.Cars.ToListAsync());
 
-app.MapGet("/cars/make", async (string make, CarDb db) =>
+cars.MapGet("/make", async (string make, CarDb db) =>
     await db.Cars.Where(c => c.Make == make).ToListAsync());
 
-app.MapGet("/cars/registered", async (CarDb db) =>
+cars.MapGet("/registered", async (CarDb db) =>
     await db.Cars.Where(t => t.IsRegistered).ToListAsync());
 
-app.MapGet("/cars/unregistered", async (CarDb db) =>
+cars.MapGet("/unregistered", async (CarDb db) =>
     await db.Cars.Where(t => !t.IsRegistered).ToListAsync());
 
-app.MapGet("/cars/{id}", async (int id, CarDb db) =>
+cars.MapGet("/{id}", async (int id, CarDb db) =>
     await db.Cars.FindAsync(id)
         is Car car
             ? Results.Ok(car)
             : Results.NotFound());
 
-app.MapPost("/cars", async (Car car, CarDb db) =>
+cars.MapPost("/", async (Car car, CarDb db) =>
 {
     db.Cars.Add(car);
     await db.SaveChangesAsync();
 
-    return Results.Created($"/cars/{car.Id}", car);
+    return Results.Created($"/{car.Id}", car);
 });
 
-app.MapPut("/car/{id}", async (int id, Car inputCar, CarDb db) =>
+cars.MapPut("/car/{id}", async (int id, Car inputCar, CarDb db) =>
 {
     var car = await db.Cars.FindAsync(id);
 
@@ -68,7 +70,7 @@ app.MapPut("/car/{id}", async (int id, Car inputCar, CarDb db) =>
     return Results.NoContent();
 });
 
-app.MapDelete("/cars/{id}", async (int id, CarDb db) =>
+cars.MapDelete("/{id}", async (int id, CarDb db) =>
 {
     if (await db.Cars.FindAsync(id) is Car car)
     {
