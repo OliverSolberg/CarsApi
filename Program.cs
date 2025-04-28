@@ -1,7 +1,15 @@
+using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddDbContext<CarDb>(opt => opt.UseInMemoryDatabase("CarList"));
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+    });
+
+builder.Services.AddDbContext<AppDb>(opt => opt.UseInMemoryDatabase("Lists"));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -28,39 +36,73 @@ if(app.Environment.IsDevelopment())
 var cars = app.MapGroup("/cars");
 var people = app.MapGroup("/people");
 
-cars.MapGet("/", async (CarDb db) =>
+cars.MapGet("/", async (AppDb db) =>
     await db.Cars.ToListAsync());
-people.MapGet("/", async (PeopleDb db) =>
-    await db.People.ToListAsync());
+people.MapGet("/", async (AppDb db) =>
+{
+    var person = await db.People
+        .Include(p => p.Cars)
+        .FirstOrDefaultAsync();
+    return person is not null 
+        ? Results.Ok(person) 
+        : Results.NotFound();
+});
 
-cars.MapGet("/{make}", async (string make, CarDb db) =>
+cars.MapGet("/brand/{make}", async (string make, AppDb db) =>
     await db.Cars.Where(c => c.Make == make).ToListAsync());
 
-cars.MapGet("/registered", async (CarDb db) =>
+cars.MapGet("/brand", async (AppDb db) =>
+    await db.Cars.OrderBy(c => c.Make).ToListAsync());
+
+cars.MapGet("/registered", async (AppDb db) =>
     await db.Cars.Where(t => t.IsRegistered).ToListAsync());
 
-cars.MapGet("/unregistered", async (CarDb db) =>
+cars.MapGet("/unregistered", async (AppDb db) =>
     await db.Cars.Where(t => !t.IsRegistered).ToListAsync());
 
-cars.MapGet("/{id}", async (int id, CarDb db) =>
+cars.MapGet("/{id}", async (int id, AppDb db) =>
     await db.Cars.FindAsync(id)
         is Car car
             ? Results.Ok(car)
             : Results.NotFound());
-people.MapGet("/{id}", async (int id, PeopleDb db) =>
-    await db.People.FindAsync(id)
-        is Person person
-            ? Results.Ok(person)
-            : Results.NotFound());
 
-cars.MapPost("/", async (Car car, CarDb db) =>
+people.MapGet("/{id}", async (int id, AppDb db) =>
 {
+    var person = await db.People
+        .Include(p => p.Cars) // 👈 this is important
+        .FirstOrDefaultAsync(p => p.Id == id);
+
+    return person is not null 
+        ? Results.Ok(person) 
+        : Results.NotFound();
+});
+
+
+cars.MapPost("/", async (Car car, AppDb db) =>
+{
+    if(car.PersonId != 0)
+    {
+        var owner = await db.People.FindAsync(car.PersonId);
+        if(owner != null)
+        {
+            car.SetOwner(owner);
+            if(owner.Cars == null)
+            {
+                owner.Cars = new List<Car>();
+            }
+            owner.Cars.Add(car);
+        }
+        else
+        {
+            return Results.NotFound();
+        }
+    }
+
     db.Cars.Add(car);
     await db.SaveChangesAsync();
-
     return Results.Created($"/{car.Id}", car);
 });
-people.MapPost("/", async ( Person person, PeopleDb db) =>
+people.MapPost("/", async ( Person person, AppDb db) =>
 {
     db.People.Add(person);
     await db.SaveChangesAsync();
@@ -68,7 +110,7 @@ people.MapPost("/", async ( Person person, PeopleDb db) =>
     return Results.Created($"/{person.Id}", person);
 });
 
-cars.MapPut("/{id}", async (int id, Car inputCar, CarDb db) =>
+cars.MapPut("/{id}", async (int id, Car inputCar, AppDb db) =>
 {
     var car = await db.Cars.FindAsync(id);
 
@@ -78,14 +120,15 @@ cars.MapPut("/{id}", async (int id, Car inputCar, CarDb db) =>
     car.Make = inputCar.Make;
     car.Model = inputCar.Model;
     car.BuildYear = inputCar.BuildYear;
-    car.Owner = inputCar.Owner;
+    car.PersonId = inputCar.PersonId;
+    car.SetOwner(inputCar.Owner);
 
     await db.SaveChangesAsync();
 
     return Results.NoContent();
 });
 
-people.MapPut("/{id}", async (int id, Person inputPerson, PeopleDb db) =>
+people.MapPut("/{id}", async (int id, Person inputPerson, AppDb db) =>
 {
     var person = await db.People.FindAsync(id);
 
@@ -93,14 +136,14 @@ people.MapPut("/{id}", async (int id, Person inputPerson, PeopleDb db) =>
 
     person.Name = inputPerson.Name;
     person.Birthday = inputPerson.Birthday;
-    person.Car = inputPerson.Car;
+    person.Cars = inputPerson.Cars;
 
     await db.SaveChangesAsync();
 
     return Results.NoContent();
 });
 
-cars.MapDelete("/{id}", async (int id, CarDb db) =>
+cars.MapDelete("/{id}", async (int id, AppDb db) =>
 {
     if (await db.Cars.FindAsync(id) is Car car)
     {
@@ -111,7 +154,7 @@ cars.MapDelete("/{id}", async (int id, CarDb db) =>
 
     return Results.NotFound();
     });
-people.MapDelete("/{id}", async (int id, PeopleDb db) =>
+people.MapDelete("/{id}", async (int id, AppDb db) =>
 {
     if(await db.People.FindAsync(id) is Person person)
     {

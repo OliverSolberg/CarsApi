@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 public class Car
 {
     public int Id  {get; set;}
@@ -5,17 +7,12 @@ public class Car
     public string? Model {get; set;}
     public string? Make {get; set;}
     public int BuildYear {get; set;}
-    private Person? _owner;
-    public Person? Owner
+    public int PersonId {get; set;}
+    [JsonIgnore]
+    public Person? Owner {get; private set;}
+    public void SetOwner(Person owner)
     {
-        get => _owner;
-        set
-        {
-            _owner = value;
-            if(value != null && value.Car != this)
-            {
-                value.Car = this;
-            }
-        }
+        Owner = owner;
+        PersonId = owner.Id;
     }
 }
