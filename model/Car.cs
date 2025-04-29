@@ -9,10 +9,6 @@ public class Car
     public int BuildYear {get; set;}
     public int PersonId {get; set;}
     [JsonIgnore]
-    public Person? Owner {get; private set;}
-    public void SetOwner(Person owner)
-    {
-        Owner = owner;
-        PersonId = owner.Id;
-    }
+    public Person? Owner {get; set;}
+    
 }

@@ -39,14 +39,7 @@ var people = app.MapGroup("/people");
 cars.MapGet("/", async (AppDb db) =>
     await db.Cars.ToListAsync());
 people.MapGet("/", async (AppDb db) =>
-{
-    var person = await db.People
-        .Include(p => p.Cars)
-        .FirstOrDefaultAsync();
-    return person is not null 
-        ? Results.Ok(person) 
-        : Results.NotFound();
-});
+    await db.People.Include(p => p.Cars).ToListAsync());
 
 cars.MapGet("/brand/{make}", async (string make, AppDb db) =>
     await db.Cars.Where(c => c.Make == make).ToListAsync());
@@ -80,23 +73,22 @@ people.MapGet("/{id}", async (int id, AppDb db) =>
 
 cars.MapPost("/", async (Car car, AppDb db) =>
 {
-    if(car.PersonId != 0)
+    var owner = await db.People.FindAsync(car.PersonId);
+
+    if(owner != null)
     {
-        var owner = await db.People.FindAsync(car.PersonId);
-        if(owner != null)
+        car.Owner = owner;
+        if(owner.Cars == null)
         {
-            car.SetOwner(owner);
-            if(owner.Cars == null)
-            {
-                owner.Cars = new List<Car>();
-            }
-            owner.Cars.Add(car);
+            owner.Cars = new List<Car>();
         }
-        else
-        {
-            return Results.NotFound();
-        }
+        owner.Cars.Add(car);
     }
+    else
+    {
+        return Results.NotFound();
+    }
+    
 
     db.Cars.Add(car);
     await db.SaveChangesAsync();
@@ -116,12 +108,31 @@ cars.MapPut("/{id}", async (int id, Car inputCar, AppDb db) =>
 
     if(car is null) return Results.NotFound();
 
+    var newOwner = await db.People.FindAsync(inputCar.PersonId);
+    var currentOwner = await db.People.FindAsync(car.PersonId);
+    if(newOwner != currentOwner)
+    {
+        if(currentOwner != null && currentOwner.Cars != null)
+        {
+            currentOwner.Cars.Remove(car);
+        }
+
+        if(newOwner != null)
+        {
+            if(newOwner.Cars == null)
+            {
+                newOwner.Cars = new List<Car>();
+            }
+
+            newOwner.Cars.Add(car);
+        }
+        car.Owner = inputCar.Owner;
+    }
     car.IsRegistered = inputCar.IsRegistered;
     car.Make = inputCar.Make;
     car.Model = inputCar.Model;
     car.BuildYear = inputCar.BuildYear;
     car.PersonId = inputCar.PersonId;
-    car.SetOwner(inputCar.Owner);
 
     await db.SaveChangesAsync();
 
@@ -136,7 +147,6 @@ people.MapPut("/{id}", async (int id, Person inputPerson, AppDb db) =>
 
     person.Name = inputPerson.Name;
     person.Birthday = inputPerson.Birthday;
-    person.Cars = inputPerson.Cars;
 
     await db.SaveChangesAsync();
 
