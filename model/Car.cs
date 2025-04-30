@@ -10,5 +10,4 @@ public class Car
     public int PersonId {get; set;}
     [JsonIgnore]
     public Person? Owner {get; set;}
-    
 }
