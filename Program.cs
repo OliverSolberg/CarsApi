@@ -163,7 +163,7 @@ cars.MapDelete("/{id}", async (int id, AppDb db) =>
     }
 
     return Results.NotFound();
-    });
+});
 people.MapDelete("/{id}", async (int id, AppDb db) =>
 {
     if(await db.People.FindAsync(id) is Person person)
@@ -177,3 +177,4 @@ people.MapDelete("/{id}", async (int id, AppDb db) =>
 });
 
     app.Run();
+    
