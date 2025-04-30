@@ -56,7 +56,7 @@ cars.MapGet("/{id}", async (int id, AppDb db) =>
 people.MapGet("/{id}", async (int id, AppDb db) =>
 {
     var person = await db.People
-        .Include(p => p.Cars) // 👈 this is important
+        .Include(p => p.Cars) 
         .FirstOrDefaultAsync(p => p.Id == id);
 
     return person is not null 
