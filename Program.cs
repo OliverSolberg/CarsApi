@@ -3,12 +3,6 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
-    });
-
 builder.Services.AddDbContext<AppDb>(opt => opt.UseInMemoryDatabase("Lists"));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
