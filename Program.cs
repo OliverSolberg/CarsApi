@@ -176,5 +176,5 @@ people.MapDelete("/{id}", async (int id, AppDb db) =>
     return Results.NotFound();
 });
 
-    app.Run();
+app.Run();
     
