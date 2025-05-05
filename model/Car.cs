@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 public class Car
 {
     public int Id  {get; set;}
@@ -5,5 +7,7 @@ public class Car
     public string? Model {get; set;}
     public string? Make {get; set;}
     public int BuildYear {get; set;}
-    public string? Owner {get; set;}
+    public int PersonId {get; set;}
+    [JsonIgnore]
+    public Person? Owner {get; set;}
 }
